@@ -23,7 +23,6 @@ export class AuthService {
     }
 
     // TODO: Send OTP via SMS (you can use Twilio, Exotel, etc.)
-    console.log(`OTP for ${phone}: ${otp}`);
 
     return { message: 'OTP sent!' };
   }
