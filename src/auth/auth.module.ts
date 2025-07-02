@@ -13,6 +13,11 @@ export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(LoggerMiddleware)
-       .forRoutes({ path: 'auth/register', method: RequestMethod.POST });
+      // .forRoutes(AuthController)
+      //  .forRoutes({ path: 'auth/register', method: RequestMethod.POST });
+      .forRoutes(
+        { path: 'auth/login', method: RequestMethod.POST },
+        { path: 'auth/register', method: RequestMethod.POST }
+      );
   }
 }
