@@ -4,25 +4,16 @@ import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   async register(phone: string) {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    let user = await this.prisma.user.findUnique({ where: { phone } });
-
-    if (user) {
-      await this.prisma.user.update({
-        where: { phone },
-        data: { otp },
-      });
-    } else {
-      await this.prisma.user.create({
-        data: { phone, otp },
-      });
-    }
-
-    // TODO: Send OTP via SMS (you can use Twilio, Exotel, etc.)
+    await this.prisma.user.upsert({
+      where: { phone },
+      update: { otp },
+      create: { phone, otp },
+    });
 
     return { message: 'OTP sent!' };
   }
@@ -39,7 +30,11 @@ export class AuthService {
       data: { verified: true, otp: null },
     });
 
-    const token = jwt.sign({ userId: user.id }, 'bunny-secret-key', {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not defined in environment variables');
+    }
+    const token = jwt.sign({ userId: user.id }, jwtSecret, {
       expiresIn: '7d',
     });
 

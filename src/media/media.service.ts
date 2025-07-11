@@ -5,7 +5,7 @@ import { PrismaService } from "@src/prisma.service";
 @Injectable()
 export class MediaService {
     constructor(private prisma: PrismaService, private s3Service: S3Service) { }
-    async uploadMedia(file: Express.Multer.File) {
+    async uploadMedia(file: any) {
         const url = await this.s3Service.uploadFile(file);
         return { url };
     }
