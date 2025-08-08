@@ -33,11 +33,20 @@ export default function VideoChat() {
     const roomIdRef = useRef<string | null>(null);
     const isInitiatorRef = useRef<boolean>(false);
 
-    const rtcConfiguration = {
+    const rtcConfiguration: RTCConfiguration = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            // Add TURN servers for mobile devices
+            {
+                urls: 'turn:relay1.expressturn.com:3478',
+                credential: '6BUAdHD6',
+                username: 'ef4CRVZS4V8P'
+            }
+        ],
+        iceCandidatePoolSize: 10,
+        iceTransportPolicy: 'all' as RTCIceTransportPolicy
     };
 
     // WebSocket message handler
@@ -128,86 +137,216 @@ export default function VideoChat() {
 
     // WebRTC functions
     const initializeWebRTC = async () => {
-        peerConnectionRef.current = new RTCPeerConnection(rtcConfiguration);
+        try {
+            peerConnectionRef.current = new RTCPeerConnection(rtcConfiguration);
 
-        // Add local stream
-        if (localStreamRef.current) {
-            localStreamRef.current.getTracks().forEach(track => {
-                peerConnectionRef.current?.addTrack(track, localStreamRef.current!);
-            });
-        }
+            // Add connection state monitoring for mobile debugging
+            peerConnectionRef.current.onconnectionstatechange = () => {
+                console.log('Connection state:', peerConnectionRef.current?.connectionState);
+                if (peerConnectionRef.current?.connectionState === 'failed') {
+                    console.log('Connection failed, trying to restart ICE');
+                    peerConnectionRef.current?.restartIce();
+                }
+            };
 
-        // Handle remote stream
-        peerConnectionRef.current.ontrack = (event) => {
-            remoteStreamRef.current = event.streams[0];
-            if (remoteVideoRef.current) {
-                remoteVideoRef.current.srcObject = remoteStreamRef.current;
+            peerConnectionRef.current.oniceconnectionstatechange = () => {
+                console.log('ICE connection state:', peerConnectionRef.current?.iceConnectionState);
+            };
+
+            peerConnectionRef.current.onicegatheringstatechange = () => {
+                console.log('ICE gathering state:', peerConnectionRef.current?.iceGatheringState);
+            };
+
+            // Add local stream
+            if (localStreamRef.current) {
+                localStreamRef.current.getTracks().forEach(track => {
+                    if (peerConnectionRef.current) {
+                        peerConnectionRef.current.addTrack(track, localStreamRef.current!);
+                    }
+                });
             }
-            setStatus({ message: 'Connected to partner', type: 'connected' });
-        };
 
-        // Handle ICE candidates
-        peerConnectionRef.current.onicecandidate = (event) => {
-            if (event.candidate) {
-                sendWebSocketMessage('webrtc_ice_candidate', {
-                    candidate: event.candidate,
+            // Handle remote stream with mobile-specific handling
+            peerConnectionRef.current.ontrack = (event) => {
+                console.log('Received remote track:', event.track.kind);
+                remoteStreamRef.current = event.streams[0];
+                if (remoteVideoRef.current) {
+                    remoteVideoRef.current.srcObject = remoteStreamRef.current;
+                    // Force play on mobile devices
+                    remoteVideoRef.current.play().catch(e => {
+                        console.log('Auto-play prevented, user interaction required');
+                    });
+                }
+                setStatus({ message: 'Connected to partner', type: 'connected' });
+            };
+
+            // Handle ICE candidates with timeout for mobile
+            peerConnectionRef.current.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log('Sending ICE candidate:', event.candidate.type);
+                    sendWebSocketMessage('webrtc_ice_candidate', {
+                        candidate: event.candidate,
+                        roomId: roomIdRef.current
+                    });
+                } else {
+                    console.log('ICE gathering completed');
+                }
+            };
+
+            // Create offer if initiator with mobile-optimized constraints
+            if (isInitiatorRef.current) {
+                const offerOptions = {
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true,
+                    voiceActivityDetection: false // Better for mobile
+                };
+                
+                const offer = await peerConnectionRef.current.createOffer(offerOptions);
+                await peerConnectionRef.current.setLocalDescription(offer);
+                
+                console.log('Created and set local offer');
+                sendWebSocketMessage('webrtc_offer', {
+                    offer: offer,
                     roomId: roomIdRef.current
                 });
             }
-        };
-
-        // Create offer if initiator
-        if (isInitiatorRef.current) {
-            const offer = await peerConnectionRef.current.createOffer();
-            await peerConnectionRef.current.setLocalDescription(offer);
-            sendWebSocketMessage('webrtc_offer', {
-                offer: offer,
-                roomId: roomIdRef.current
-            });
+        } catch (error) {
+            console.error('Error initializing WebRTC:', error);
+            setStatus({ message: 'Failed to initialize connection', type: 'disconnected' });
         }
     };
 
     const handleOffer = async (offer: RTCSessionDescriptionInit) => {
-        if (!peerConnectionRef.current) {
-            await initializeWebRTC();
+        try {
+            console.log('Received offer from partner');
+            
+            if (!peerConnectionRef.current) {
+                await initializeWebRTC();
+            }
+
+            if (peerConnectionRef.current) {
+                await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
+                console.log('Set remote description (offer)');
+                
+                // Create answer with mobile-optimized constraints
+                const answerOptions = {
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true,
+                    voiceActivityDetection: false
+                };
+                
+                const answer = await peerConnectionRef.current.createAnswer(answerOptions);
+                await peerConnectionRef.current.setLocalDescription(answer);
+                console.log('Created and set local answer');
+
+                sendWebSocketMessage('webrtc_answer', {
+                    answer: answer,
+                    roomId: roomIdRef.current
+                });
+            }
+        } catch (error) {
+            console.error('Error handling offer:', error);
+            setStatus({ message: 'Connection failed', type: 'disconnected' });
         }
-
-        await peerConnectionRef.current!.setRemoteDescription(offer);
-        const answer = await peerConnectionRef.current!.createAnswer();
-        await peerConnectionRef.current!.setLocalDescription(answer);
-
-        sendWebSocketMessage('webrtc_answer', {
-            answer: answer,
-            roomId: roomIdRef.current
-        });
     };
 
     const handleAnswer = async (answer: RTCSessionDescriptionInit) => {
-        if (peerConnectionRef.current) {
-            await peerConnectionRef.current.setRemoteDescription(answer);
+        try {
+            console.log('Received answer from partner');
+            
+            if (peerConnectionRef.current) {
+                await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+                console.log('Set remote description (answer)');
+            }
+        } catch (error) {
+            console.error('Error handling answer:', error);
+            setStatus({ message: 'Connection failed', type: 'disconnected' });
         }
     };
 
     const handleIceCandidate = async (candidate: RTCIceCandidateInit) => {
-        if (peerConnectionRef.current) {
-            await peerConnectionRef.current.addIceCandidate(candidate);
+        try {
+            console.log('Received ICE candidate');
+            
+            if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+                await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+                console.log('Added ICE candidate');
+            } else {
+                console.log('Queuing ICE candidate - remote description not set yet');
+                // Queue the candidate for later if remote description is not set
+                setTimeout(() => {
+                    if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+                        peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+                            .catch(e => console.error('Error adding queued ICE candidate:', e));
+                    }
+                }, 1000);
+            }
+        } catch (error) {
+            console.error('Error handling ICE candidate:', error);
         }
     };
 
     // Media functions
     const getUserMedia = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: true,
-                audio: true
-            });
+            // Mobile-optimized constraints
+            const constraints = {
+                video: {
+                    width: { ideal: 640, max: 1280 },
+                    height: { ideal: 480, max: 720 },
+                    frameRate: { ideal: 15, max: 30 },
+                    facingMode: 'user' // Front camera for mobile
+                },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    // Mobile-specific audio constraints
+                    sampleRate: 44100,
+                    channelCount: 1
+                }
+            };
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
             localStreamRef.current = stream;
+            
             if (localVideoRef.current) {
                 localVideoRef.current.srcObject = stream;
+                // Ensure video plays on mobile
+                localVideoRef.current.muted = true; // Local video should be muted
+                localVideoRef.current.play().catch(e => {
+                    console.log('Local video auto-play prevented');
+                });
             }
+
+            console.log('Media stream obtained:', {
+                videoTracks: stream.getVideoTracks().length,
+                audioTracks: stream.getAudioTracks().length
+            });
+
         } catch (error) {
             console.error('Error accessing camera/microphone:', error);
-            throw error;
+            
+            // Try with reduced constraints for older mobile devices
+            try {
+                const fallbackConstraints = {
+                    video: { width: 320, height: 240 },
+                    audio: true
+                };
+                
+                const fallbackStream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+                localStreamRef.current = fallbackStream;
+                
+                if (localVideoRef.current) {
+                    localVideoRef.current.srcObject = fallbackStream;
+                    localVideoRef.current.muted = true;
+                }
+                
+                console.log('Fallback media stream obtained');
+            } catch (fallbackError) {
+                console.error('Fallback media access also failed:', fallbackError);
+                throw error;
+            }
         }
     };
 
