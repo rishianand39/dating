@@ -93,7 +93,7 @@ export default function VideoChat() {
 
     // WebSocket functions
     const connectWebSocket = useCallback(() => {
-        wsRef.current = new WebSocket('ws://localhost:3000');
+        wsRef.current = new WebSocket('https://dating-kw95.onrender.com');
 
         wsRef.current.onopen = () => {
             console.log('WebSocket connected');
