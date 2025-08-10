@@ -155,10 +155,15 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     @ConnectedSocket() client: ExtendedWebSocket,
     @MessageBody() data: { candidate: any; roomId: string }
   ) {
-    this.forwardToRoomPartner(client, data.roomId, 'webrtc_ice_candidate', { 
-      candidate: data.candidate,
-      from: client.userId 
-    });
+    this.logger.log(`ICE candidate from ${client.userId} in room ${data.roomId}`);
+    
+    // Add delay for mobile devices to ensure proper ICE candidate processing
+    setTimeout(() => {
+      this.forwardToRoomPartner(client, data.roomId, 'webrtc_ice_candidate', { 
+        candidate: data.candidate,
+        from: client.userId 
+      });
+    }, 100); // Small delay helps with mobile WebRTC timing
   }
 
   @SubscribeMessage('chat_message')
@@ -185,6 +190,20 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       client.roomId = undefined;
       this.sendToClient(client, 'left_room', { message: 'You left the room' });
     }
+  }
+
+  @SubscribeMessage('connection_state')
+  handleConnectionState(
+    @ConnectedSocket() client: ExtendedWebSocket,
+    @MessageBody() data: { state: string; roomId: string }
+  ) {
+    this.logger.log(`Connection state ${data.state} from ${client.userId} in room ${data.roomId}`);
+    
+    // Forward connection state to partner for debugging
+    this.forwardToRoomPartner(client, data.roomId, 'partner_connection_state', {
+      state: data.state,
+      from: client.userId
+    });
   }
 
   @SubscribeMessage('next_partner')
