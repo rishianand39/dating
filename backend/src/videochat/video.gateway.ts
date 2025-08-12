@@ -28,11 +28,11 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
   @WebSocketServer() server: Server;
   private logger: Logger = new Logger('VideoChatGateway');
 
-  constructor(private videoChatService: VideoChatService) {}
+  constructor(private videoChatService: VideoChatService) { }
 
   afterInit(server: Server) {
     this.logger.log('WebSocket Gateway initialized');
-    
+
     // Setup heartbeat to detect disconnected clients
     const interval = setInterval(() => {
       server.clients.forEach((ws: ExtendedWebSocket) => {
@@ -56,7 +56,9 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     client.isAlive = true;
 
     this.logger.log(`Client connected: ${userId}`);
-    
+    this.logger.log(`Connection args:`, args); // Debug: see connection details
+    this.logger.log(`Total connected clients: ${this.server.clients.size}`); // Debug: see total connections
+
     // Setup pong handler for heartbeat
     client.on('pong', () => {
       client.isAlive = true;
@@ -68,12 +70,12 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   handleDisconnect(client: ExtendedWebSocket) {
     this.logger.log(`Client disconnected: ${client.userId}`);
-    
+
     if (client.roomId && client.userId) {
       this.videoChatService.leaveRoom(client.userId, client.roomId);
       this.notifyRoomPartner(client.roomId, client.userId, 'partner_disconnected');
     }
-    
+
     if (client.userId) {
       this.videoChatService.removeWaitingUser(client.userId);
     }
@@ -87,10 +89,10 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     }
 
     this.logger.log(`User ${client.userId} looking for partner`);
-    
+
     try {
       const room = await this.videoChatService.findOrCreateRoom(client.userId);
-      
+
       if (room.users.length === 1) {
         // First user in room, waiting for partner
         client.roomId = room.id;
@@ -98,24 +100,24 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       } else if (room.users.length === 2) {
         // Second user joined, notify both users
         client.roomId = room.id;
-        
+
         const partnerId = room.users.find(id => id !== client.userId);
         if (partnerId) {
           const partner = this.findClientByUserId(partnerId);
           if (partner) {
             partner.roomId = room.id;
-            
+
             // Notify both users that match is found
-            this.sendToClient(client, 'partner_found', { 
-              roomId: room.id, 
+            this.sendToClient(client, 'partner_found', {
+              roomId: room.id,
               partnerId: partner.userId,
-              isInitiator: true 
+              isInitiator: true
             });
-            
-            this.sendToClient(partner, 'partner_found', { 
-              roomId: room.id, 
+
+            this.sendToClient(partner, 'partner_found', {
+              roomId: room.id,
               partnerId: client.userId,
-              isInitiator: false 
+              isInitiator: false
             });
           }
         }
@@ -132,9 +134,9 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { offer: any; roomId: string }
   ) {
     this.logger.log(`WebRTC offer from ${client.userId} in room ${data.roomId}`);
-    this.forwardToRoomPartner(client, data.roomId, 'webrtc_offer', { 
+    this.forwardToRoomPartner(client, data.roomId, 'webrtc_offer', {
       offer: data.offer,
-      from: client.userId 
+      from: client.userId
     });
   }
 
@@ -144,9 +146,9 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { answer: any; roomId: string }
   ) {
     this.logger.log(`WebRTC answer from ${client.userId} in room ${data.roomId}`);
-    this.forwardToRoomPartner(client, data.roomId, 'webrtc_answer', { 
+    this.forwardToRoomPartner(client, data.roomId, 'webrtc_answer', {
       answer: data.answer,
-      from: client.userId 
+      from: client.userId
     });
   }
 
@@ -156,12 +158,12 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { candidate: any; roomId: string }
   ) {
     this.logger.log(`ICE candidate from ${client.userId} in room ${data.roomId}`);
-    
+
     // Add delay for mobile devices to ensure proper ICE candidate processing
     setTimeout(() => {
-      this.forwardToRoomPartner(client, data.roomId, 'webrtc_ice_candidate', { 
+      this.forwardToRoomPartner(client, data.roomId, 'webrtc_ice_candidate', {
         candidate: data.candidate,
-        from: client.userId 
+        from: client.userId
       });
     }, 100); // Small delay helps with mobile WebRTC timing
   }
@@ -183,10 +185,10 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
   handleLeaveRoom(@ConnectedSocket() client: ExtendedWebSocket) {
     if (client.roomId && client.userId) {
       this.logger.log(`User ${client.userId} leaving room ${client.roomId}`);
-      
+
       this.videoChatService.leaveRoom(client.userId, client.roomId);
       this.notifyRoomPartner(client.roomId, client.userId, 'partner_left');
-      
+
       client.roomId = undefined;
       this.sendToClient(client, 'left_room', { message: 'You left the room' });
     }
@@ -198,7 +200,7 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { state: string; roomId: string }
   ) {
     this.logger.log(`Connection state ${data.state} from ${client.userId} in room ${data.roomId}`);
-    
+
     // Forward connection state to partner for debugging
     this.forwardToRoomPartner(client, data.roomId, 'partner_connection_state', {
       state: data.state,
@@ -218,6 +220,8 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     // Find new partner
     this.handleFindPartner(client);
   }
+
+  // HELPER FUNCTON
 
   private findClientByUserId(userId: string): ExtendedWebSocket | undefined {
     for (const client of this.server.clients) {
@@ -255,9 +259,9 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
       const partner = this.findClientByUserId(partnerId);
       if (partner) {
         partner.roomId = undefined;
-        this.sendToClient(partner, event, { 
+        this.sendToClient(partner, event, {
           message: 'Your partner has disconnected',
-          roomId 
+          roomId
         });
       }
     }

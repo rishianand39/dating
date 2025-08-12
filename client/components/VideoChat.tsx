@@ -16,7 +16,7 @@ interface WebSocketMessage {
 
 export default function VideoChat() {
     // State management
-    const [status, setStatus] = useState({ message: 'Disconnected - Click "Start Chat" to begin', type: 'disconnected' });
+    const [status, setStatus] = useState({ message: 'Click "Start Chat" to begin', type: 'disconnected' });
     const [messages, setMessages] = useState<Message[]>([]);
     const [messageInput, setMessageInput] = useState('');
     const [isConnected, setIsConnected] = useState(false);
@@ -252,8 +252,6 @@ export default function VideoChat() {
 
     const handleAnswer = async (answer: RTCSessionDescriptionInit) => {
         try {
-            console.log('Received answer from partner');
-            
             if (peerConnectionRef.current) {
                 await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
                 console.log('Set remote description (answer)');
@@ -289,13 +287,12 @@ export default function VideoChat() {
     // Media functions
     const getUserMedia = async () => {
         try {
-            // Mobile-optimized constraints
             const constraints = {
                 video: {
                     width: { ideal: 640, max: 1280 },
                     height: { ideal: 480, max: 720 },
                     frameRate: { ideal: 15, max: 30 },
-                    facingMode: 'user' // Front camera for mobile
+                    facingMode: 'user' 
                 },
                 audio: {
                     echoCancellation: true,
@@ -313,16 +310,12 @@ export default function VideoChat() {
             if (localVideoRef.current) {
                 localVideoRef.current.srcObject = stream;
                 // Ensure video plays on mobile
-                localVideoRef.current.muted = true; // Local video should be muted
+                localVideoRef.current.muted = true; 
                 localVideoRef.current.play().catch(e => {
                     console.log('Local video auto-play prevented');
                 });
             }
 
-            console.log('Media stream obtained:', {
-                videoTracks: stream.getVideoTracks().length,
-                audioTracks: stream.getAudioTracks().length
-            });
 
         } catch (error) {
             console.error('Error accessing camera/microphone:', error);
