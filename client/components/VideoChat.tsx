@@ -449,100 +449,116 @@ export default function VideoChat() {
 
     return (
         <div className={styles.container}>
-            <h1>Omegle-like Video Chat</h1>
+            <div className={styles.mainContent}>
+                <header className={styles.header}>
+                    <h1 className={styles.title}>LoveConnect</h1>
+                    <p className={styles.subtitle}>Connect • Chat • Fall in Love</p>
+                </header>
 
-            <div className={`${styles.status} ${styles[status.type]}`}>
-                {status.message}
-            </div>
-
-            <div className={styles.videoContainer}>
-                <div className={styles.videoWrapper}>
-                    <video
-                        ref={localVideoRef}
-                        autoPlay
-                        muted
-                        className={styles.video}
-                    />
-                    <div className={styles.videoLabel}>You</div>
+                <div className={`${styles.status} ${styles[status.type]}`}>
+                    <span>{status.message}</span>
                 </div>
-                <div className={styles.videoWrapper}>
-                    <video
-                        ref={remoteVideoRef}
-                        autoPlay
-                        className={styles.video}
-                    />
-                    <div className={styles.videoLabel}>Partner</div>
-                </div>
-            </div>
 
-            <div className={styles.controls}>
-                <button
-                    onClick={startChat}
-                    disabled={isConnected}
-                    className={`${styles.button} ${styles.primary}`}
-                >
-                    Start Chat
-                </button>
-                <button
-                    onClick={nextPartner}
-                    disabled={!isConnected}
-                    className={`${styles.button} ${styles.warning}`}
-                >
-                    Next Partner
-                </button>
-                <button
-                    onClick={stopChat}
-                    disabled={!isConnected}
-                    className={`${styles.button} ${styles.danger}`}
-                >
-                    Stop Chat
-                </button>
-                <button
-                    onClick={toggleMute}
-                    disabled={!isConnected}
-                    className={`${styles.button} ${styles.secondary}`}
-                >
-                    {isMuted ? 'Unmute' : 'Mute'}
-                </button>
-                <button
-                    onClick={toggleVideo}
-                    disabled={!isConnected}
-                    className={`${styles.button} ${styles.secondary}`}
-                >
-                    {isVideoOff ? 'Turn On Video' : 'Turn Off Video'}
-                </button>
-            </div>
-
-            <div className={styles.chatContainer}>
-                <div className={styles.chatMessages}>
-                    {messages.map((message, index) => (
-                        <div
-                            key={index}
-                            className={`${styles.message} ${message.isOwn ? styles.own : styles.partner}`}
-                        >
-                            <small>{new Date(message.timestamp).toLocaleTimeString()}</small>
-                            <br />
-                            {message.text}
-                        </div>
-                    ))}
+                <div className={styles.videoContainer}>
+                    <div className={`${styles.videoWrapper} ${styles.localVideo}`}>
+                        <video
+                            ref={localVideoRef}
+                            autoPlay
+                            muted
+                            playsInline
+                            className={styles.video}
+                        />
+                        <div className={styles.videoLabel}>💝 You</div>
+                    </div>
+                    <div className={`${styles.videoWrapper} ${styles.remoteVideo}`}>
+                        <video
+                            ref={remoteVideoRef}
+                            autoPlay
+                            playsInline
+                            className={styles.video}
+                        />
+                        <div className={styles.videoLabel}>💕 Partner</div>
+                    </div>
                 </div>
-                <div className={styles.chatInput}>
-                    <input
-                        type="text"
-                        value={messageInput}
-                        onChange={(e) => setMessageInput(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                        placeholder="Type a message..."
-                        disabled={!isConnected}
-                        className={styles.input}
-                    />
+
+                <div className={styles.controls}>
                     <button
-                        onClick={sendMessage}
-                        disabled={!isConnected}
+                        onClick={startChat}
+                        disabled={isConnected}
                         className={`${styles.button} ${styles.primary}`}
                     >
-                        Send
+                        🚀 Start Adventure
                     </button>
+                    <button
+                        onClick={nextPartner}
+                        disabled={!isConnected}
+                        className={`${styles.button} ${styles.warning}`}
+                    >
+                        ⭐ Next Match
+                    </button>
+                    <button
+                        onClick={stopChat}
+                        disabled={!isConnected}
+                        className={`${styles.button} ${styles.danger}`}
+                    >
+                        ✋ Stop Chat
+                    </button>
+                    <button
+                        onClick={toggleMute}
+                        disabled={!isConnected}
+                        className={`${styles.button} ${styles.secondary}`}
+                    >
+                        {isMuted ? '🔊 Unmute' : '🔇 Mute'}
+                    </button>
+                    <button
+                        onClick={toggleVideo}
+                        disabled={!isConnected}
+                        className={`${styles.button} ${styles.success}`}
+                    >
+                        {isVideoOff ? '📹 Camera On' : '🚫 Camera Off'}
+                    </button>
+                </div>
+
+                <div className={styles.chatContainer}>
+                    <div className={styles.chatMessages}>
+                        {messages.length === 0 && (
+                            <div style={{ 
+                                textAlign: 'center', 
+                                color: 'rgba(255, 255, 255, 0.6)', 
+                                marginTop: '50px',
+                                fontStyle: 'italic'
+                            }}>
+                                💬 Start a conversation...
+                            </div>
+                        )}
+                        {messages.map((message, index) => (
+                            <div
+                                key={index}
+                                className={`${styles.message} ${message.isOwn ? styles.own : styles.partner}`}
+                            >
+                                <small>{new Date(message.timestamp).toLocaleTimeString()}</small>
+                                {message.text}
+                            </div>
+                        ))}
+                    </div>
+                    <div className={styles.chatInput}>
+                        <input
+                            type="text"
+                            value={messageInput}
+                            onChange={(e) => setMessageInput(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                            placeholder="Type your message... 💭"
+                            disabled={!isConnected}
+                            className={styles.input}
+                        />
+                        <button
+                            onClick={sendMessage}
+                            disabled={!isConnected || !messageInput.trim()}
+                            className={`${styles.button} ${styles.primary}`}
+                        >
+                            💌 Send
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

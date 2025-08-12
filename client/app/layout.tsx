@@ -1,20 +1,40 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Dating App - Video Chat",
-  description: "Connect with people through Omegle-like video chat",
+  title: "LoveConnect - Find Your Perfect Match",
+  description: "Connect with amazing people through live video chat and create meaningful relationships in a safe, fun environment.",
+  keywords: "dating, video chat, relationships, meet people, online dating",
+  authors: [{ name: "LoveConnect Team" }],
+  creator: "LoveConnect",
+  openGraph: {
+    title: "LoveConnect - Find Your Perfect Match",
+    description: "Connect with amazing people through live video chat",
+    type: "website",
+    locale: "en_US",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+  },
 };
 
 export default function RootLayout({
@@ -23,9 +43,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${geistMono.variable} antialiased min-h-screen`}
       >
         {children}
       </body>
