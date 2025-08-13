@@ -31,7 +31,7 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
   constructor(private videoChatService: VideoChatService) { }
 
   afterInit(server: Server) {
-    this.logger.log('WebSocket Gateway initialized');
+    this.logger.log('WebSocket Gateway initialized', this.server);
 
     // Setup heartbeat to detect disconnected clients
     const interval = setInterval(() => {
@@ -56,9 +56,9 @@ export class VideoChatGateway implements OnGatewayConnection, OnGatewayDisconnec
     client.isAlive = true;
 
     this.logger.log(`Client connected: ${userId}`);
-    this.logger.log(`Connection args:`, args); // Debug: see connection details
-    this.logger.log(`Total connected clients: ${this.server.clients.size}`); // Debug: see total connections
-
+    this.logger.log(`Connection args:`, args);
+    this.logger.log(`Total connected clients: ${this.server.clients}`);
+    console.log("client connected", client.userId);
     // Setup pong handler for heartbeat
     client.on('pong', () => {
       client.isAlive = true;
