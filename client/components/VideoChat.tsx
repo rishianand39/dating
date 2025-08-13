@@ -451,7 +451,7 @@ export default function VideoChat() {
         <div className={styles.container}>
             <div className={styles.mainContent}>
                 <header className={styles.header}>
-                    <h1 className={styles.title}>LoveConnect</h1>
+                    <h1 className={styles.title}>Datting Lake</h1>
                     <p className={styles.subtitle}>Connect • Chat • Fall in Love</p>
                 </header>
 

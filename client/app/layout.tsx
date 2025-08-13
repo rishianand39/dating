@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LoveConnect - Find Your Perfect Match",
+  title: "Datting Lake - Find Your Perfect Match",
   description: "Connect with amazing people through live video chat and create meaningful relationships in a safe, fun environment.",
   keywords: "dating, video chat, relationships, meet people, online dating",
-  authors: [{ name: "LoveConnect Team" }],
-  creator: "LoveConnect",
+  authors: [{ name: "Datting Lake Team" }],
+  creator: "Datting Lake",
   openGraph: {
-    title: "LoveConnect - Find Your Perfect Match",
+    title: "Datting Lake - Find Your Perfect Match",
     description: "Connect with amazing people through live video chat",
     type: "website",
     locale: "en_US",
